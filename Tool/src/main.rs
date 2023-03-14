@@ -1,3 +1,8 @@
+/*
+	Author: Elias (Gotzi) Gottsbacher
+	Copyright (c) 2023 Elias Gottsbacher
+*/
+
 use std::env;
 
 mod command;
@@ -6,12 +11,15 @@ mod utils;
 
 use crate::command::*;
 use crate::commands::*;
-use crate::fdesc_cmd::create_fdesc_cmd;
+use crate::fdesc_cmd::{create_fdesc_cmd, create_nfdesc_cmd};
 
 fn register_all_commands(command_handler: &mut CommandHandler, home: &String) {
 
     let fdesc = create_fdesc_cmd(home);
     command_handler.register(fdesc);
+
+    let nfdesc = create_nfdesc_cmd(home);
+    command_handler.register(nfdesc);
 }
 
 fn main() {

@@ -1,6 +1,11 @@
+/*
+	Author: Elias (Gotzi) Gottsbacher
+	Copyright (c) 2023 Elias Gottsbacher
+*/
+
 use std::collections::HashMap;
 use std::env;
-use std::path::PathBuf;
+use std::path::{PathBuf};
 
 pub struct CommandContext {
     pub args: Vec<String>,
@@ -32,6 +37,7 @@ impl CommandHandler {
         self.commands.insert(command.label.clone(), command);
     }
 
+    /*
     pub fn deregister_with_label(&mut self, label: &String) {
         if !self.commands.contains_key(label) {
             return;
@@ -39,6 +45,7 @@ impl CommandHandler {
 
         self.commands.remove(label);
     }
+     */
 
     pub fn run_command(&mut self, raw_args: &mut Vec<String>, home_dir: &String) {
         let cmd = match raw_args.get(1) {
