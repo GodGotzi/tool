@@ -1,0 +1,1 @@
+C:\Users\Elias\Desktop\tool\Tool\target\release\tool.exe: C:\Users\Elias\Desktop\tool\Tool\src\command\mod.rs C:\Users\Elias\Desktop\tool\Tool\src\commands\fdesc_cmd.rs C:\Users\Elias\Desktop\tool\Tool\src\commands\mod.rs C:\Users\Elias\Desktop\tool\Tool\src\commands\protocol_cmd.rs C:\Users\Elias\Desktop\tool\Tool\src\main.rs C:\Users\Elias\Desktop\tool\Tool\src\utils\mod.rs

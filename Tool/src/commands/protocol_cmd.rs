@@ -1,162 +1,242 @@
 
-use std::fs::File;
-use std::io::{Read, Write};
-use std::path::Path;
+use std::fs::{File, self};
+use std::io::{self, Write};
+use std::path::{PathBuf, Path};
 
-use chrono::DateTime;
+use chrono::{DateTime, Local};
 
 use crate::utils::create_folder;
 use crate::command::*;
 
-fn create_folder_structure(home: &String) {
-    let folder_name = format!("{}\\protocol", home);
-    create_folder(folder_name.as_str());
+fn start(file_path: &str, content: &str, format: &str, now: DateTime<Local>) {
+    let to_write = format!("$Start: {}", now.format(format));
 
-}
-
-fn start(info_file: &mut (File, bool), content: &str, format: &str) {
-    if !info_file.1 {
-        println!("protocol on {} already started!", content);
-        return;
-    }
-
-    let date_time = chrono::offset::Local::now();
-    let to_write = format!("Start: {:?}", date_time.format(format));
-
-    match info_file.0.write_all(to_write.as_bytes()) {
+    match fs::write(file_path, to_write) {
         Ok(_) => println!("Protocol for {} started", content),
-        Err(_) => panic!("Couldn't write to file")
+        Err(err) => panic!("Couldn't write to file {}", err),
     }
-
-    if let Err(err) = info_file.0.flush() {
-        panic!("Couldn't write to file {}", err);
-    }
-
 }
 
-fn end(info_file: &mut (File, bool), content: &str, format: &str) {
-    if info_file.1 {
-        println!("protocol on {} not started! (You need to start the protocol first)", content);
-        return;
-    }
+fn end(file_path: &Path, file_buf: &str, content: &str, format: &str, now: DateTime<Local>) {
 
-    let mut buf = String::new();
-    info_file.0.read_to_string(&mut buf).unwrap();
-    let mut lines: Vec<&str> = buf.lines().collect();
+    let mut lines: Vec<&str> = file_buf.lines().collect();
     
-    let end = chrono::offset::Local::now();
-    let end_str = format!("End: {:?}", end.format(format));
+    let now_str = format!("$End: {}", now.format(format));
 
-    let start_str = lines.remove(0);
-    let start = match DateTime::parse_from_str(start_str, format) {
-        Ok(datetime) => datetime.with_timezone(&end.timezone()),
+    let start_str = lines.remove(0).replace("$Start: ", "");
+    let start = match DateTime::parse_from_str(&start_str, format) {
+        Ok(datetime) => datetime.with_timezone(&now.timezone()),
         Err(_) => panic!("Couldn't parse datetime!"),
     };
 
-    let result = start - end;
+    let result = start - now;
     let buf_to_write = lines.join("\n");
 
-    let to_write = format!("{}\n{}\n{}\n{}", start_str, end_str, result.num_hours(), buf_to_write);
+    let to_write = format!("$Start: {}\n{}\n§{} hours {} minutes\n{}", start_str, now_str, result.num_hours(), -(result.num_minutes() % 60), buf_to_write);
 
-    match info_file.0.write_all(to_write.as_bytes()) {
+    match fs::write(file_path, to_write) {
         Ok(_) => println!("Protcol for {} ended!", content),
-        Err(_) => panic!("Couldn't write to file"),
+        Err(err) => panic!("Couldn't write to file {}", err),
     }
 
-    if let Err(err) = info_file.0.flush() {
-        panic!("Couldn't write to file {}", err);
-    }
 }
 
-fn time(info_file: &mut (File, bool), content: &str, format: &str) {
-    if info_file.1 {
-        println!("protocol on {} not started! (You need to start the protocol first)", content);
-        return;
-    }
+fn time(_file_path: &Path, file_buf: &str, _content: &str, format: &str, now: DateTime<Local>) {
 
-    let mut buf = String::new();
-    info_file.0.read_to_string(&mut buf).unwrap();
-    let lines: Vec<&str> = buf.lines().collect();
+    let lines: Vec<&str> = file_buf.lines().collect();
 
-    let start_str = lines[0];
+    let start_str = lines[0].replace("$Start: ", "");
 
-    let end = chrono::offset::Local::now();
-    let end_str = format!("End: {:?}", end.format(format));
-
-    let start = match DateTime::parse_from_str(start_str, format) {
-        Ok(datetime) => datetime.with_timezone(&end.timezone()),
+    let start = match DateTime::parse_from_str(&start_str, format) {
+        Ok(datetime) => datetime.with_timezone(&now.timezone()),
         Err(_) => panic!("Couldn't parse datetime!"),
     };
 
-    let result = start - end;
+    let result = start - now;
 
-    println!("Protcol runs since {} for {}", end_str, result.num_hours());
+    println!("Protocol runs since {} for {} hours and {} minutes", start_str, result.num_hours(), -(result.num_minutes() % 60));
 }
 
-fn info(info_file: &mut (File, bool), content: &str, _format: &str) {
-    if info_file.1 {
-        println!("protocol on {} not started! (You need to start the protocol first)", content);
-        return;
+fn info(file_path: &Path, file_buf: &str, content: &str, format: &str, now: DateTime<Local>) {
+
+    print!("Protcol Text Input: ");
+
+    if let Err(err) = io::stdout().flush() {
+        panic!("{}", err);
     }
-
-    let mut buf = String::new();
-    info_file.0.read_to_string(&mut buf).unwrap();
-
-    print!("Protcol text input and include other files (must be in content folder zb File{{test.png}}: ");
 
     let mut input_line = String::new();
     std::io::stdin().read_line(&mut input_line).unwrap();
 
-    let to_write = format!("{}\n{}" ,buf ,input_line);
+    let now_str = format!("End: {}", now.format(format));
 
-    match info_file.0.write_all(to_write.as_bytes()) {
-        Ok(_) => println!("Text for Protocol {} added!", content),
-        Err(_) => panic!("Couldn't write to file"),
+    let to_write = format!("{}\nInfo [{}]: {}", file_buf, now_str, input_line);
+
+    match fs::write(file_path, to_write) {
+        Ok(_) => println!("Info for Protocol {} added!", content),
+        Err(err) => panic!("Couldn't write to file {}", err),
     }
 
-    if let Err(err) = info_file.0.flush() {
-        panic!("Couldn't write to file {}", err);
-    }
 }
 
 fn run_cmd(command_context: CommandContext) {
-    let format = String::from("%Y-%m-%d %H:%M:%S %z");
-
-    if command_context.args.len() != 2 {
-        println!("CommandSyntaxError: protocol [content_folder] start/end/time/info");
+    if command_context.args.len() != 3 {
+        println!("CommandSyntaxError: protocol [content_folder] [protocol_name] start/end/time/info");
         return;
     }
 
+    let fmt_ymd = String::from("%Y-%m-%d");
+
     let content = command_context.args.get(0).unwrap();
 
-    let folder_name = format!("{}\\protocol\\{}", command_context.home, content);
+    let folder_name = format!("protocol\\{}", content);
     create_folder(folder_name.as_str());
 
-    let info_file_name = format!("{}\\protocol\\{}", command_context.home, content);
-    let info_file_path = Path::new(info_file_name.as_str());
+    let now = chrono::offset::Local::now();
 
-    let mut info_file: (File, bool) =  match File::open(info_file_path) {
-        Ok(file) => (file, false),
-        Err(_) => (File::create(info_file_name.as_str()).unwrap(), true)
-    };
+    if let Some(protocol_name) = command_context.args.get(1) {
+        if let Some(mode) = command_context.args.get(2) {
+            create_folder(format!("{}\\{}_{}", folder_name, protocol_name, now.format(&fmt_ymd)).as_str());
 
-    match command_context.args.get(0) {
-        Some(arg) => {
-            match arg.as_str() {
-                "start" => start(&mut info_file, content, &format),
-                "end" => end(&mut info_file, content, &format),
-                "time" => time(&mut info_file, content, &format),
-                "info" => info(&mut info_file, content, &format),
-                _ => println!("CommandSyntaxError: protocol [content_folder] start/end/time/info")
+            match_mode(mode, protocol_name, content, now);
+        }
+    }
+}
+
+fn protocol_is_completed(buf: &str) -> bool {
+    let lines: Vec<&str> = buf.lines().collect();
+    if lines.len() > 1 {
+        lines[1].contains("$End:")
+    } else {
+        false
+    }
+}
+
+fn match_mode(arg_mode: &str, arg_protocol: &str, content: &str, now: DateTime<Local>) {
+    let format = String::from("%Y-%m-%d %H:%M:%S %z");
+    let fmt = String::from("%Y-%m-%d_%H-%M");
+    let fmt_ymd = String::from("%Y-%m-%d");
+    let folder_path = format!("protocol\\{}\\{}_{}", content, arg_protocol, now.format(&fmt_ymd));
+
+    match arg_mode {
+        "start" => {
+            let protocol_path = format!("{}\\{}_{}.prtcl", folder_path, arg_protocol, now.format(&fmt));
+
+            if let Ok(file_content) = fs::read_to_string(&protocol_path) {
+                if protocol_is_completed(&file_content) {
+                    println!("this Protocol is already finished, start a new protocol!");
+                    return;
+                }
+            }
+
+            match File::open(&protocol_path) {
+                Ok(_) => {
+                    println!("Protocol on {} already started!", content);
+                },
+                Err(_) => {
+                    File::create(&protocol_path).unwrap();
+                }
+            };
+
+            start(&protocol_path, content, &format, now)
+        },
+        "end" => {
+            let protocol_path = match most_recent_file(&folder_path) {
+                Some(path) => path,
+                None => {
+                    println!("Protocol on {}->{} not started! (You need to start the protocol first)", content, arg_protocol);
+                    return;
+                }
+            };
+
+            if let Ok(file_content) = fs::read_to_string(&protocol_path) {
+                if protocol_is_completed(&file_content) {
+                    println!("This Protocol is already finished, start a new protocol!");
+                    return;
+                }
+
+                if File::open(&protocol_path).is_err() {
+                    println!("Protocol on {} not started! (You need to start the protocol first)", content);
+                    return;
+                };
+    
+                end(&protocol_path, &file_content, content, &format, now)
+            } else {
+                println!("Protocol on {} not started! (You need to start the protocol first)", content);
+            }
+        
+        },
+        "time" => {
+            let protocol_path = match most_recent_file(&folder_path) {
+                Some(path) => path,
+                None => {
+                    println!("Protocol on {}->{} not started! (You need to start the protocol first)", content, arg_protocol);
+                    return;
+                }
+            };
+
+            if let Ok(file_content) = fs::read_to_string(&protocol_path) {
+                if protocol_is_completed(&file_content) {
+                    println!("this Protocol is already finished, start a new protocol!");
+                    return;
+                }
+
+                if File::open(&protocol_path).is_err() {
+                    println!("Protocol on {} not started! (You need to start the protocol first)", content);
+                    return;
+                };
+    
+                time(&protocol_path, &file_content, content, &format, now)
+            } else {
+                println!("Protocol on {} not started! (You need to start the protocol first)", content);
             }
         },
-        None => println!("CommandSyntaxError: protocol [content_folder] start/end/time/info")
-    };
+        "info" => {
+            let protocol_path = match most_recent_file(&folder_path) {
+                Some(path) => path,
+                None => {
+                    println!("Protocol on {}->{} not started! (You need to start the protocol first)", content, arg_protocol);
+                    return;
+                }
+            };
+
+            if let Ok(file_content) = fs::read_to_string(&protocol_path) {
+                if protocol_is_completed(&file_content) {
+                    println!("this Protocol is already finished, start a new protocol!");
+                    return;
+                }
+
+                if File::open(&protocol_path).is_err() {
+                    println!("Protocol on {} not started! (You need to start the protocol first)", content);
+                    return;
+                };
+    
+                info(&protocol_path, &file_content, content, &format, now)
+            } else {
+                println!("Protocol on {} not started! (You need to start the protocol first)", content);
+            }
+        },
+        _ => println!("CommandSyntaxError: protocol [content_folder] [protocol_name] start/end/time/info")
+    }
+}
+
+fn most_recent_file(folder_path: &str) -> Option<PathBuf> {
+    let mut entries: Vec<fs::DirEntry> = fs::read_dir(folder_path)
+    .expect("Couldn't access local directory")
+    .flatten() // Remove failed
+    .collect();
+    entries.sort_by_cached_key(|f| f.metadata().unwrap().modified().unwrap());
+
+    if !entries.is_empty() {
+        Some(entries[0].path())
+    } else {
+        None
+    }
 
 }
 
-pub fn create_protocol_cmd(home: &String) -> Command {
-    create_folder_structure(home);
+pub fn create_protocol_cmd() -> Command {
+    create_folder("protocol");
 
     let action = |command_context: CommandContext| {
         run_cmd(command_context);

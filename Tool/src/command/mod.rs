@@ -10,8 +10,7 @@ use std::path::{PathBuf};
 pub struct CommandContext {
     pub args: Vec<String>,
     pub label: String,
-    pub from: PathBuf,
-    pub home: String
+    pub from: PathBuf
 }
 
 pub struct Command {
@@ -47,7 +46,7 @@ impl CommandHandler {
     }
      */
 
-    pub fn run_command(&mut self, raw_args: &mut [String], home_dir: &String) {
+    pub fn run_command(&mut self, raw_args: &mut [String]) {
         let cmd = match raw_args.get(1) {
             Some(str) => str.to_string(),
             None => {
@@ -69,8 +68,7 @@ impl CommandHandler {
         let command_action = CommandContext {
             args: raw_args.iter().skip(2).map(|s| s.to_owned()).collect(),
             label: cmd.to_string(),
-            from,
-            home: home_dir.to_string()
+            from
         };
 
         (command.action)(command_action);

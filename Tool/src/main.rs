@@ -15,25 +15,24 @@ use crate::command::*;
 use crate::commands::*;
 use crate::fdesc_cmd::{create_fdesc_cmd, create_nfdesc_cmd};
 
-fn register_all_commands(command_handler: &mut CommandHandler, home: &String) {
+fn register_all_commands(command_handler: &mut CommandHandler) {
 
-    let fdesc = create_fdesc_cmd(home);
+    let fdesc = create_fdesc_cmd();
     command_handler.register(fdesc);
 
-    let nfdesc = create_nfdesc_cmd(home);
+    let nfdesc = create_nfdesc_cmd();
     command_handler.register(nfdesc);
 
-    let protocol = create_protocol_cmd(home);
+    let protocol = create_protocol_cmd();
     command_handler.register(protocol);
 }
 
 fn main() {
+    //env::set_var("RUST_BACKTRACE", "1");
     let mut args: Vec<String> = env::args().collect();
 
-    let home_dir = args.get(0).unwrap().clone().replace("\\Tool.exe", "");
-
     let mut command_handler = CommandHandler::new();
-    register_all_commands(&mut command_handler, &home_dir);
+    register_all_commands(&mut command_handler);
 
-    command_handler.run_command(&mut args, &home_dir);
+    command_handler.run_command(&mut args);
 }

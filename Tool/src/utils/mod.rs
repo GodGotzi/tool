@@ -13,7 +13,7 @@ pub fn create_folder(folder_name: &str) {
         Ok(_) => {},
         Err(err) => {
             if err.kind() != ErrorKind::AlreadyExists {
-                panic!("Couldn't create directory");
+                println!("Couldn't create directory {}", err);
             }
         }
     }
@@ -27,7 +27,7 @@ pub fn create_file(file_name: &str) {
             Ok(_) => {},
             Err(err) => {
                 if err.kind() != ErrorKind::AlreadyExists {
-                    panic!("Couldn't create file");
+                    panic!("Couldn't create file {}", err);
                 }
             }
         }

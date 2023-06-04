@@ -43,8 +43,8 @@ fn run_cmd(command_context: CommandContext, modifier: &FileModifier) {
 fn iter_project_files(command_context: &CommandContext, modifier: &FileModifier, file_position: &str, position: FilePosition) {
     let content_folder = command_context.args.get(1).unwrap();
 
-    let content_path_str = format!("{}\\fdesc-pattern\\{}\\{}.txt",
-                    command_context.home, content_folder, file_position);
+    let content_path_str = format!("fdesc-pattern\\{}\\{}.txt",
+                    content_folder, file_position);
 
     let content_path = Path::new( content_path_str.as_str());
 
@@ -105,23 +105,16 @@ fn modify_file_remove(path: &Path, content_path: &Path, _position: &FilePosition
     };
 }
 
-fn create_folder_structure(home: &String) {
-
-    let folder_name = format!("{}\\fdesc-pattern", home);
-    create_folder(folder_name.as_str());
-
-    let default_folder = format!("{}\\fdesc-pattern\\default", home);
-    create_folder(default_folder.as_str());
-
-    let top_file = format!("{}\\fdesc-pattern\\default\\top.txt", home);
-    create_file(top_file.as_str());
-    let bottom_file = format!("{}\\fdesc-pattern\\default\\bottom.txt", home);
-    create_file(bottom_file.as_str());
+fn create_folder_structure() {
+    create_folder("fdesc-pattern");
+    create_folder("fdesc-pattern\\default");
+    create_file("fdesc-pattern\\default\\top.txt");
+    create_file("fdesc-pattern\\default\\bottom.txt");
 
 }
 
-pub fn create_fdesc_cmd(home: &String) -> Command {
-    create_folder_structure(home);
+pub fn create_fdesc_cmd() -> Command {
+    create_folder_structure();
 
     let action = |command_action: CommandContext| {
         let modifier = | path: &Path, content_path: &Path, position: &FilePosition | {
@@ -146,8 +139,8 @@ pub fn create_fdesc_cmd(home: &String) -> Command {
 
 }
 
-pub fn create_nfdesc_cmd(home: &String) -> Command {
-    create_folder_structure(home);
+pub fn create_nfdesc_cmd() -> Command {
+    create_folder_structure();
 
     let action = |command_action: CommandContext| {
         let modifier = | path: &Path, content_path: &Path, position: &FilePosition | {
