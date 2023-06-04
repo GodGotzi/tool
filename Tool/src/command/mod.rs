@@ -47,7 +47,7 @@ impl CommandHandler {
     }
      */
 
-    pub fn run_command(&mut self, raw_args: &mut Vec<String>, home_dir: &String) {
+    pub fn run_command(&mut self, raw_args: &mut [String], home_dir: &String) {
         let cmd = match raw_args.get(1) {
             Some(str) => str.to_string(),
             None => {

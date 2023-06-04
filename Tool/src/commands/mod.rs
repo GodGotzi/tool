@@ -4,3 +4,4 @@
 */
 
 pub mod fdesc_cmd;
+pub mod protocol_cmd;

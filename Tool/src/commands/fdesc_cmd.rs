@@ -9,8 +9,8 @@ use crate::command::*;
 use crate::utils::{create_file, create_folder};
 
 enum FilePosition {
-    TOP,
-    BOTTOM
+    Top,
+    Bottom
 }
 
 struct FileModifier {
@@ -28,10 +28,10 @@ fn run_cmd(command_context: CommandContext, modifier: &FileModifier) {
         Some(arg) => {
             match arg.as_str() {
                 "top" => {
-                    iter_project_files(&command_context, modifier, arg, FilePosition::TOP);
+                    iter_project_files(&command_context, modifier, arg, FilePosition::Top);
                 },
                 "bottom" => {
-                    iter_project_files(&command_context, modifier, arg, FilePosition::BOTTOM);
+                    iter_project_files(&command_context, modifier, arg, FilePosition::Bottom);
                 },
                 _ => println!("CommandSyntaxError: fdesc top/bottom [content_folder] [file_ending]")
             }
@@ -58,18 +58,16 @@ fn iter_project_files(command_context: &CommandContext, modifier: &FileModifier,
 fn loop_files(dir_path: &Path, content_path: &Path, modifier: &FileModifier, file_ending: &str, position: &FilePosition) {
 
     if let Ok(entries) = fs::read_dir(dir_path) {
-        for entry in entries {
-            if let Ok(entry) = entry {
-                let path = entry.path();
+        for entry in entries.flatten() {
+            let path = entry.path();
 
-                if path.is_file() {
-                    if path.file_name().unwrap().to_str().unwrap().ends_with(file_ending) {
-                        (modifier.modify_file)(path.as_path(), content_path, position);
-                        //modify_file(path.as_path(), content_path, modifier, position);
-                    }
-                } else {
-                    loop_files(path.as_path(), content_path, modifier, file_ending, position);
+            if path.is_file() {
+                if path.file_name().unwrap().to_str().unwrap().ends_with(file_ending) {
+                    (modifier.modify_file)(path.as_path(), content_path, position);
+                    //modify_file(path.as_path(), content_path, modifier, position);
                 }
+            } else {
+                loop_files(path.as_path(), content_path, modifier, file_ending, position);
             }
         }
     } else {
@@ -84,14 +82,11 @@ fn modify_file_add(path: &Path, content_path: &Path, position: &FilePosition) {
     let content = fs::read_to_string(content_path).unwrap();
 
     let stuff_to_write = match position {
-        FilePosition::TOP => format!("{}\n\n{}", content, source),
-        FilePosition::BOTTOM => format!("{}\n\n{}", source, content)
+        FilePosition::Top => format!("{}\n\n{}", content, source),
+        FilePosition::Bottom => format!("{}\n\n{}", source, content)
     };
 
-    while match fs::write(path, &stuff_to_write) {
-        Ok(_) => false,
-        Err(_) => true
-    } {
+    while fs::write(path, &stuff_to_write).is_err() {
         println!("Couldn't write content retry again!");
     };
 }
@@ -105,10 +100,7 @@ fn modify_file_remove(path: &Path, content_path: &Path, _position: &FilePosition
     let pattern = format!("{}\n\n", content);
     let stuff_to_write = source.replacen(pattern.as_str(), "", 1);
 
-    while match fs::write(path, &stuff_to_write) {
-        Ok(_) => false,
-        Err(_) => true
-    } {
+    while fs::write(path, &stuff_to_write).is_err() {
         println!("Couldn't write content retry again!");
     };
 }
@@ -146,13 +138,12 @@ pub fn create_fdesc_cmd(home: &String) -> Command {
     let label = String::from("fdesc");
     let desc = String::from("Filters all source files and adds descriptions (author, project and more)!");
 
-    let cmd = Command {
+    Command {
         action,
         label,
         desc,
-    };
+    }
 
-    return cmd;
 }
 
 pub fn create_nfdesc_cmd(home: &String) -> Command {
@@ -173,11 +164,10 @@ pub fn create_nfdesc_cmd(home: &String) -> Command {
     let label = String::from("nfdesc");
     let desc = String::from("Filters all source files and adds descriptions (author, project and more)!");
 
-    let cmd = Command {
+    Command {
         action,
         label,
         desc,
-    };
+    }
 
-    return cmd;
 }
